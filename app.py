@@ -122,7 +122,7 @@ Upload photos now. They will be securely stored and used to help improve fall pr
                             image = image.resize((1280, h_size), Image.LANCZOS)
 
                         buffer = io.BytesIO()
-                        image.save(buffer, format="JPEG", quality=85)
+                        image.save(buffer, format="JPEG", quality=90, optimize=True)
                         buffer.seek(0)
 
                         s3.upload_fileobj(
