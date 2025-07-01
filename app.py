@@ -73,7 +73,7 @@ Before you begin, please enter your name and email:
         else:
             st.session_state["user_info"] = {"name": name_clean, "email": email_clean}
             st.session_state["user_info_provided"] = True
-            st.experimental_rerun()
+            st.rerun()
     st.stop()
 
 
