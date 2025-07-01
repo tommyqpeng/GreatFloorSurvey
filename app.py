@@ -72,6 +72,14 @@ Before you begin, please enter your name and email:
             st.session_state["user_info"] = {"name": name.strip(), "email": email.strip()}
             st.session_state["user_info_provided"] = True
             st.rerun()
+    st.stop()
+
+def show_thank_you_screen():
+    st.title("Upload Complete")
+    st.success("Your photos have been uploaded.")
+    st.markdown("### Thank You")
+    st.info("Thank you for joining us on the journey to reduce falls and preserve active independence in the elderly.")
+    st.stop()
 
 def show_upload_screen():
     st.title("Upload Your Floor Photos")
@@ -135,17 +143,12 @@ Upload photos now. They will be securely stored and used to help improve fall pr
 
             except Exception as e:
                 st.error(f"Upload failed: {e}")
-
-def show_thank_you_screen():
-    st.success("Your photos have been uploaded.")
-    st.markdown("### Thank You")
-    st.info("Thank you for joining us on the journey to reduce falls and preserve active independence in the elderly.")
-
+    st.stop()
 
 # --- Routing Logic ---
 if not st.session_state["user_info_provided"]:
     show_user_info_form()
-elif not st.session_state["upload_complete"]:
-    show_upload_screen()
-else:
+elif st.session_state["upload_complete"]:
     show_thank_you_screen()
+else:
+    show_upload_screen()
