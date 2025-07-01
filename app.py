@@ -69,7 +69,7 @@ Before you begin, please enter your name and email:
         else:
             st.session_state['submitted'] = True
             st.session_state['user_info'] = {'name': name.strip(), 'email': email.strip()}
-            st.experimental_rerun()
+            st.rerun()
 
 # --- Page 2: Upload Photos ---
 else:
