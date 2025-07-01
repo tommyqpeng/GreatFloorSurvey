@@ -4,6 +4,8 @@ import uuid
 from datetime import datetime
 import tempfile
 import os
+from PIL import Image
+import re
 
 # --- Load Secrets ---
 AWS_ACCESS_KEY = st.secrets["aws_access_key_id"]
@@ -29,7 +31,6 @@ dynamodb = boto3.resource(
 table = dynamodb.Table(DYNAMO_TABLE)
 
 # --- Email Validation ---
-import re
 def is_valid_email(email):
     return re.match(r"[^@]+@[^@]+\.[^@]+", email)
 
@@ -90,25 +91,34 @@ Upload photos now. They will be securely stored and used to help improve fall pr
                 name = st.session_state['user_info']['name']
                 email = st.session_state['user_info']['email']
                 timestamp = datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')
-                original_names = []
+                uploaded_keys = []
 
                 with st.spinner("Uploading your photos..."):
                     for file in uploaded_files:
-                        original_name = file.name
-                        ext = original_name.split('.')[-1]
-                        unique_filename = f"{timestamp.replace(' ', '_').replace(':', '-')}_{uuid.uuid4().hex[:8]}.{ext}"
-                        original_names.append(original_name)
+                        ext = file.name.split('.')[-1].lower()
+                        unique_filename = f"{timestamp.replace(' ', '_').replace(':', '-')}_{uuid.uuid4().hex[:8]}.jpg"
+                        s3_key = unique_filename
+                        uploaded_keys.append(s3_key)
 
-                        # Save temp file to upload
-                        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-                            tmp_file.write(file.read())
+                        # Open and compress image
+                        image = Image.open(file).convert("RGB")
+
+                        # Resize if width > 1280px
+                        if image.width > 1280:
+                            new_height = int((1280 / image.width) * image.height)
+                            image = image.resize((1280, new_height))
+
+                        # Save to temp file
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
+                            image.save(tmp_file.name, format="JPEG", quality=85, optimize=True)
                             tmp_file_path = tmp_file.name
 
+                        # Upload to S3
                         s3.upload_file(
                             Filename=tmp_file_path,
                             Bucket=S3_BUCKET,
-                            Key=f"photos/{unique_filename}"
-                            )
+                            Key=s3_key
+                        )
                         os.remove(tmp_file_path)
 
                 # Log to DynamoDB
@@ -117,14 +127,14 @@ Upload photos now. They will be securely stored and used to help improve fall pr
                     "name": name,
                     "email": email,
                     "timestamp": timestamp,
-                    "num_photos": len(original_names),
-                    "photo_names": original_names
+                    "num_photos": len(uploaded_keys),
+                    "photo_keys": uploaded_keys
                 })
 
-                st.success(f"Uploaded {len(original_names)} photo(s) successfully.")
+                st.success(f"✅ Uploaded {len(uploaded_keys)} photo(s) successfully.")
                 st.markdown("---")
-                st.markdown("### Thank You")
+                st.markdown("### 🙏 Thank You")
                 st.info("Thank you for joining us on the journey to reduce falls and preserve active independence in the elderly.")
 
             except Exception as e:
-                st.error(f"Upload failed: {e}")
+                st.error(f"❌ Upload failed: {e}")
