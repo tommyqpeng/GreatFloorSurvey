@@ -58,19 +58,24 @@ We're asking for your help by taking top-down photos of **common floor surfaces*
 
 Before you begin, please enter your name and email:
 """)
+
     name = st.text_input("Your Name", value="")
     email = st.text_input("Your Email", value="")
 
+    name_clean = name.strip()
+    email_clean = email.strip()
+
     if st.button("Continue"):
-        if not name.strip():
+        if not name_clean:
             st.error("Please enter your name.")
-        elif not is_valid_email(email):
+        elif not is_valid_email(email_clean):
             st.error("Please enter a valid email address.")
         else:
-            st.session_state["user_info"] = {"name": name.strip(), "email": email.strip()}
+            st.session_state["user_info"] = {"name": name_clean, "email": email_clean}
             st.session_state["user_info_provided"] = True
-            st.rerun()
+            st.experimental_rerun()
     st.stop()
+
 
 def show_thank_you_screen():
     st.title("Upload Complete")
