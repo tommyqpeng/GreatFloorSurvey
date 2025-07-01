@@ -131,10 +131,10 @@ Upload photos now. They will be securely stored and used to help improve fall pr
                     "photo_keys": uploaded_keys
                 })
 
-                st.success(f"✅ Uploaded {len(uploaded_keys)} photo(s) successfully.")
+                st.success(f"Uploaded {len(uploaded_keys)} photo(s) successfully.")
                 st.markdown("---")
-                st.markdown("### 🙏 Thank You")
+                st.markdown("### Thank You")
                 st.info("Thank you for joining us on the journey to reduce falls and preserve active independence in the elderly.")
 
             except Exception as e:
-                st.error(f"❌ Upload failed: {e}")
+                st.error(f"Upload failed: {e}")
