@@ -1,4 +1,2 @@
 streamlit
-gspread
-oauth2client
-pydrive2
+boto3

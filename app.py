@@ -1,62 +1,61 @@
 import streamlit as st
-import re
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from pydrive2.auth import GoogleAuth
-from pydrive2.drive import GoogleDrive
+import boto3
+import uuid
+from datetime import datetime
 import tempfile
 import os
-import json
-from datetime import datetime
-import uuid
 
-# --- Config ---
-GOOGLE_SHEET_NAME = st.secrets["google_sheet_name"]
-DRIVE_FOLDER_ID = st.secrets["google_drive_folder_id"]
-SERVICE_ACCOUNT_CREDS = json.loads(st.secrets["gsheet_drive_creds"])
+# --- Load Secrets ---
+AWS_ACCESS_KEY = st.secrets["aws_access_key_id"]
+AWS_SECRET_KEY = st.secrets["aws_secret_access_key"]
+AWS_REGION = st.secrets["aws_region"]
+S3_BUCKET = st.secrets["s3_bucket"]
+DYNAMO_TABLE = st.secrets["dynamodb_table"]
 
-# --- Auth Setup ---
-def init_gsheet():
-    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(SERVICE_ACCOUNT_CREDS, scope)
-    client = gspread.authorize(creds)
-    sheet = client.open(GOOGLE_SHEET_NAME).sheet1
-    return sheet
+# --- AWS Clients ---
+s3 = boto3.client(
+    "s3",
+    region_name=AWS_REGION,
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY
+)
 
-def init_drive():
-    gauth = GoogleAuth()
-    gauth.credentials = ServiceAccountCredentials.from_json_keyfile_dict(
-        SERVICE_ACCOUNT_CREDS, ["https://www.googleapis.com/auth/drive"]
-    )
-    gauth.Authorize()
-    return GoogleDrive(gauth)
+dynamodb = boto3.resource(
+    "dynamodb",
+    region_name=AWS_REGION,
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY
+)
+table = dynamodb.Table(DYNAMO_TABLE)
 
-# --- Utils ---
+# --- Email Validation ---
+import re
 def is_valid_email(email):
     return re.match(r"[^@]+@[^@]+\.[^@]+", email)
 
-# --- State ---
+# --- App State ---
 if 'submitted' not in st.session_state:
     st.session_state['submitted'] = False
 if 'user_info' not in st.session_state:
     st.session_state['user_info'] = {}
 
-# --- Page 1: Intro, Name & Email ---
+# --- Page 1: Info Entry ---
 if not st.session_state['submitted']:
     st.title("The Great Floor Survey!")
+
     st.markdown("""
 Welcome to our research effort to **reduce falls** and **preserve active independence** in the elderly.
 
-We're asking for your help by taking part in a quick photo survey of **floor surfaces** commonly found in aged care environments.
+We're asking for your help by taking top-down photos of **common floor surfaces** in aged care environments.
 
 ### Instructions
-- Take **top-down photos** 
-- Try to capture **as many different types of floor surfaces** as possible (e.g., carpet, tiles, rugs, wood, ramps, etc.)
-- You can upload up to **100 photos** in one go
+- Take clear **top-down** photos
+- Include a variety of surfaces (e.g., carpet, tiles, mats, wood)
+- Upload up to **100 photos** per session
 
 ---
 
-Before we begin, please enter your details below.
+Before you begin, please enter your name and email:
 """)
 
     name = st.text_input("Your Name")
@@ -77,7 +76,7 @@ else:
     st.title("Upload Your Floor Photos")
 
     st.markdown("""
-You can now upload your batch of photos. These will help our team build smarter tools to predict and prevent falls in aged care settings.
+Upload photos now. They will be securely stored and used to help improve fall prevention tools.
 """)
 
     uploaded_files = st.file_uploader("Upload up to 100 photos (JPG or PNG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
@@ -87,41 +86,43 @@ You can now upload your batch of photos. These will help our team build smarter 
             st.warning("Please limit your upload to 100 photos.")
         elif st.button("Submit Photos"):
             try:
-                drive = init_drive()
-                sheet = init_gsheet()
-
-                photo_names = []
-                timestamp_str = datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')
+                user_id = str(uuid.uuid4())
+                name = st.session_state['user_info']['name']
+                email = st.session_state['user_info']['email']
+                timestamp = datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')
+                original_names = []
 
                 with st.spinner("Uploading your photos..."):
                     for file in uploaded_files:
                         original_name = file.name
                         ext = original_name.split('.')[-1]
-                        unique_filename = f"{datetime.now().strftime('%Y%m%d-%H%M%S')}_{uuid.uuid4().hex[:8]}.{ext}"
-                        photo_names.append(original_name)
+                        unique_filename = f"{timestamp.replace(' ', '_').replace(':', '-')}_{uuid.uuid4().hex[:8]}.{ext}"
+                        original_names.append(original_name)
 
+                        # Save temp file to upload
                         with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                             tmp_file.write(file.read())
-                            upload = drive.CreateFile({
-                                'title': unique_filename,
-                                'parents': [{'id': DRIVE_FOLDER_ID}]
-                            })
-                            upload.SetContentFile(tmp_file.name)
-                            upload.Upload()
-                            os.remove(tmp_file.name)
+                            tmp_file_path = tmp_file.name
 
-                # Log to Google Sheet
-                name = st.session_state['user_info']['name']
-                email = st.session_state['user_info']['email']
-                sheet.append_row([
-                    timestamp_str,
-                    name,
-                    email,
-                    len(photo_names),
-                    ", ".join(photo_names)
-                ])
+                        s3.upload_file(
+                            Filename=tmp_file_path,
+                            Bucket=S3_BUCKET,
+                            Key=unique_filename,
+                            ExtraArgs={"StorageClass": "INTELLIGENT_TIERING"}
+                        )
+                        os.remove(tmp_file_path)
 
-                st.success(f"Uploaded {len(photo_names)} photo(s) successfully.")
+                # Log to DynamoDB
+                table.put_item(Item={
+                    "id": user_id,
+                    "name": name,
+                    "email": email,
+                    "timestamp": timestamp,
+                    "num_photos": len(original_names),
+                    "photo_names": original_names
+                })
+
+                st.success(f"Uploaded {len(original_names)} photo(s) successfully.")
                 st.markdown("---")
                 st.markdown("### Thank You")
                 st.info("Thank you for joining us on the journey to reduce falls and preserve active independence in the elderly.")
