@@ -107,9 +107,8 @@ Upload photos now. They will be securely stored and used to help improve fall pr
                         s3.upload_file(
                             Filename=tmp_file_path,
                             Bucket=S3_BUCKET,
-                            Key=unique_filename,
-                            ExtraArgs={"StorageClass": "INTELLIGENT_TIERING"}
-                        )
+                            Key=f"photos/{unique_filename}"
+                            )
                         os.remove(tmp_file_path)
 
                 # Log to DynamoDB
