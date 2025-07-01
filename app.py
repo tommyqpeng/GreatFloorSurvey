@@ -5,6 +5,7 @@ from datetime import datetime
 import tempfile
 import os
 from PIL import Image
+import io
 import re
 
 # --- Load Secrets ---
@@ -30,20 +31,21 @@ dynamodb = boto3.resource(
 )
 table = dynamodb.Table(DYNAMO_TABLE)
 
-# --- Email Validation ---
+# --- Session State Setup ---
+if "user_info_provided" not in st.session_state:
+    st.session_state["user_info_provided"] = False
+if "upload_complete" not in st.session_state:
+    st.session_state["upload_complete"] = False
+if "user_info" not in st.session_state:
+    st.session_state["user_info"] = {}
+
+# --- Helpers ---
 def is_valid_email(email):
     return re.match(r"[^@]+@[^@]+\.[^@]+", email)
 
-# --- App State ---
-if 'submitted' not in st.session_state:
-    st.session_state['submitted'] = False
-if 'user_info' not in st.session_state:
-    st.session_state['user_info'] = {}
-
-# --- Page 1: Info Entry ---
-if not st.session_state['submitted']:
+# --- UI Screens ---
+def show_user_info_form():
     st.title("The Great Floor Survey!")
-
     st.markdown("""
 Welcome to our research effort to **reduce falls** and **preserve active independence** in the elderly.
 
@@ -58,7 +60,6 @@ We're asking for your help by taking top-down photos of **common floor surfaces*
 
 Before you begin, please enter your name and email:
 """)
-
     name = st.text_input("Your Name")
     email = st.text_input("Your Email")
 
@@ -68,19 +69,21 @@ Before you begin, please enter your name and email:
         elif not is_valid_email(email):
             st.error("Please enter a valid email address.")
         else:
-            st.session_state['submitted'] = True
-            st.session_state['user_info'] = {'name': name.strip(), 'email': email.strip()}
+            st.session_state["user_info"] = {"name": name.strip(), "email": email.strip()}
+            st.session_state["user_info_provided"] = True
             st.rerun()
 
-# --- Page 2: Upload Photos ---
-else:
+def show_upload_screen():
     st.title("Upload Your Floor Photos")
-
     st.markdown("""
 Upload photos now. They will be securely stored and used to help improve fall prevention tools.
 """)
 
-    uploaded_files = st.file_uploader("Upload up to 100 photos (JPG or PNG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader(
+        "Upload up to 100 photos (JPG or PNG)",
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True
+    )
 
     if uploaded_files:
         if len(uploaded_files) > 100:
@@ -88,53 +91,61 @@ Upload photos now. They will be securely stored and used to help improve fall pr
         elif st.button("Submit Photos"):
             try:
                 user_id = str(uuid.uuid4())
-                name = st.session_state['user_info']['name']
-                email = st.session_state['user_info']['email']
+                name = st.session_state["user_info"]["name"]
+                email = st.session_state["user_info"]["email"]
                 timestamp = datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')
-                uploaded_keys = []
+                uploaded_filenames = []
 
                 with st.spinner("Uploading your photos..."):
                     for file in uploaded_files:
                         ext = file.name.split('.')[-1].lower()
-                        unique_filename = f"{timestamp.replace(' ', '_').replace(':', '-')}_{uuid.uuid4().hex[:8]}.jpg"
-                        s3_key = unique_filename
-                        uploaded_keys.append(s3_key)
+                        unique_filename = f"{timestamp.replace(' ', '_').replace(':', '-')}_{uuid.uuid4().hex[:8]}.{ext}"
+                        uploaded_filenames.append(unique_filename)
 
-                        # Open and compress image
-                        image = Image.open(file).convert("RGB")
+                        image = Image.open(file)
 
-                        # Resize if width > 1280px
+                        # Resize if wider than 1280px
                         if image.width > 1280:
-                            new_height = int((1280 / image.width) * image.height)
-                            image = image.resize((1280, new_height))
+                            w_percent = 1280 / float(image.width)
+                            h_size = int((float(image.height) * float(w_percent)))
+                            image = image.resize((1280, h_size), Image.LANCZOS)
 
-                        # Save to temp file
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
-                            image.save(tmp_file.name, format="JPEG", quality=85, optimize=True)
-                            tmp_file_path = tmp_file.name
+                        buffer = io.BytesIO()
+                        image.save(buffer, format="JPEG", quality=85)
+                        buffer.seek(0)
 
-                        # Upload to S3
-                        s3.upload_file(
-                            Filename=tmp_file_path,
+                        s3.upload_fileobj(
+                            buffer,
                             Bucket=S3_BUCKET,
-                            Key=s3_key
+                            Key=unique_filename
                         )
-                        os.remove(tmp_file_path)
 
-                # Log to DynamoDB
+                # Log metadata to DynamoDB
                 table.put_item(Item={
                     "id": user_id,
                     "name": name,
                     "email": email,
                     "timestamp": timestamp,
-                    "num_photos": len(uploaded_keys),
-                    "photo_keys": uploaded_keys
+                    "num_photos": len(uploaded_filenames),
+                    "photo_names": uploaded_filenames
                 })
 
-                st.success(f"Uploaded {len(uploaded_keys)} photo(s) successfully.")
-                st.markdown("---")
-                st.markdown("### Thank You")
-                st.info("Thank you for joining us on the journey to reduce falls and preserve active independence in the elderly.")
+                st.session_state["upload_complete"] = True
+                st.rerun()
 
             except Exception as e:
                 st.error(f"Upload failed: {e}")
+
+def show_thank_you_screen():
+    st.success("Your photos have been uploaded.")
+    st.markdown("### Thank You")
+    st.info("Thank you for joining us on the journey to reduce falls and preserve active independence in the elderly.")
+
+
+# --- Routing Logic ---
+if not st.session_state["user_info_provided"]:
+    show_user_info_form()
+elif not st.session_state["upload_complete"]:
+    show_upload_screen()
+else:
+    show_thank_you_screen()
