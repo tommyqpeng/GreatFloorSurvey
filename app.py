@@ -2,8 +2,6 @@ import streamlit as st
 import boto3
 import uuid
 from datetime import datetime
-import tempfile
-import os
 from PIL import Image
 import io
 import re
@@ -60,8 +58,8 @@ We're asking for your help by taking top-down photos of **common floor surfaces*
 
 Before you begin, please enter your name and email:
 """)
-    name = st.text_input("Your Name")
-    email = st.text_input("Your Email")
+    name = st.text_input("Your Name", value="")
+    email = st.text_input("Your Email", value="")
 
     if st.button("Continue"):
         if not name.strip():
@@ -88,13 +86,13 @@ Upload photos now. They will be securely stored and used to help improve fall pr
 """)
 
     uploaded_files = st.file_uploader(
-        "Upload up to 100 photos (JPG or PNG)",
+        "Upload up to 50 photos (JPG or PNG)",
         type=["jpg", "jpeg", "png"],
         accept_multiple_files=True
     )
 
     if uploaded_files:
-        if len(uploaded_files) > 100:
+        if len(uploaded_files) > 50:
             st.warning("Please limit your upload to 100 photos.")
         elif st.button("Submit Photos"):
             try:
