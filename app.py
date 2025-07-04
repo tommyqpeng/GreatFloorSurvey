@@ -64,7 +64,7 @@ Before you begin, please enter your details:
 
     name = st.text_input("Your Name", value="")
     email = st.text_input("Your Email", value="")
-    organisation = st.text_input("Organisation Name (e.g. Care Home or Company)", value="")
+    organisation = st.text_input("Organisation Name", value="")
 
     name_clean = name.strip()
     email_clean = email.strip()
