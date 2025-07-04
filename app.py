@@ -49,33 +49,43 @@ Welcome to our research effort to **reduce falls** and **preserve active indepen
 
 We're asking for your help by taking top-down photos of **common floor surfaces** in aged care environments.
 
+Thank you from the Senstride team!
+
 ### Instructions
 - Take clear **top-down** photos
 - Include a variety of surfaces (e.g., carpet, tiles, mats, wood)
-- Upload up to **100 photos** per session
+- Upload up to **50 photos** per session
+- Only `.jpg` or `.jpeg` files are accepted
 
 ---
 
-Before you begin, please enter your name and email:
+Before you begin, please enter your details:
 """)
 
     name = st.text_input("Your Name", value="")
     email = st.text_input("Your Email", value="")
+    organisation = st.text_input("Organisation Name (e.g. Care Home or Company)", value="")
 
     name_clean = name.strip()
     email_clean = email.strip()
+    org_clean = organisation.strip()
 
     if st.button("Continue"):
         if not name_clean:
             st.error("Please enter your name.")
         elif not is_valid_email(email_clean):
             st.error("Please enter a valid email address.")
+        elif not org_clean:
+            st.error("Please enter your organisation name.")
         else:
-            st.session_state["user_info"] = {"name": name_clean, "email": email_clean}
+            st.session_state["user_info"] = {
+                "name": name_clean,
+                "email": email_clean,
+                "organisation": org_clean
+            }
             st.session_state["user_info_provided"] = True
             st.rerun()
     st.stop()
-
 
 def show_thank_you_screen():
     st.title("Upload Complete")
@@ -88,29 +98,33 @@ def show_upload_screen():
     st.title("Upload Your Floor Photos")
     st.markdown("""
 Upload photos now. They will be securely stored and used to help improve fall prevention tools.
+
+**Only .jpg or .jpeg files are accepted.**
 """)
 
     uploaded_files = st.file_uploader(
-        "Upload up to 50 photos (JPG or PNG)",
-        type=["jpg", "jpeg", "png"],
+        "Upload up to 50 photos (JPG only)",
+        type=["jpg", "jpeg"],
         accept_multiple_files=True
     )
 
     if uploaded_files:
         if len(uploaded_files) > 50:
-            st.warning("Please limit your upload to 100 photos.")
+            st.warning("Please limit your upload to 50 photos.")
         elif st.button("Submit Photos"):
             try:
                 user_id = str(uuid.uuid4())
-                name = st.session_state["user_info"]["name"]
-                email = st.session_state["user_info"]["email"]
+                user_info = st.session_state["user_info"]
                 timestamp = datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')
                 uploaded_filenames = []
 
                 with st.spinner("Uploading your photos..."):
                     for file in uploaded_files:
                         ext = file.name.split('.')[-1].lower()
-                        unique_filename = f"{timestamp.replace(' ', '_').replace(':', '-')}_{uuid.uuid4().hex[:8]}.{ext}"
+                        if ext not in ["jpg", "jpeg"]:
+                            continue  # Skip non-JPGs (safety check)
+
+                        unique_filename = f"{timestamp.replace(' ', '_').replace(':', '-')}_{uuid.uuid4().hex[:8]}.jpg"
                         uploaded_filenames.append(unique_filename)
 
                         image = Image.open(file)
@@ -134,8 +148,9 @@ Upload photos now. They will be securely stored and used to help improve fall pr
                 # Log metadata to DynamoDB
                 table.put_item(Item={
                     "id": user_id,
-                    "name": name,
-                    "email": email,
+                    "name": user_info["name"],
+                    "email": user_info["email"],
+                    "organisation": user_info["organisation"],
                     "timestamp": timestamp,
                     "num_photos": len(uploaded_filenames),
                     "photo_names": uploaded_filenames
