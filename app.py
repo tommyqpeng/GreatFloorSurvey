@@ -7,8 +7,7 @@ import io
 import re
 import os
 import base64
-import math
-import random
+from streamlit.components.v1 import html
 
 # --- Page Config ---
 st.set_page_config(
@@ -16,55 +15,57 @@ st.set_page_config(
     page_icon="senstride_icon.png"
 )
 
-# --- Collage Background ---
-def create_collage(image_paths, collage_width=1280, thumb_size=(320, 240)):
-    images = [Image.open(p).resize(thumb_size) for p in image_paths]
-    num_images = len(images)
-    cols = collage_width // thumb_size[0]
-    rows = math.ceil(num_images / cols)
-    collage_height = rows * thumb_size[1]
-    collage = Image.new('RGB', (collage_width, collage_height), (255, 255, 255))
+def show_image_carousel(folder="sample_photos", max_images=10):
+    image_files = sorted([
+        os.path.join(folder, f)
+        for f in os.listdir(folder)
+        if f.lower().endswith((".jpg", ".jpeg"))
+    ])[:max_images]
 
-    for i, img in enumerate(images):
-        x = (i % cols) * thumb_size[0]
-        y = (i // cols) * thumb_size[1]
-        collage.paste(img, (x, y))
-
-    return collage
-
-def set_background_from_collage():
-    sample_dir = "sample_photos"
-    image_files = [os.path.join(sample_dir, f) for f in os.listdir(sample_dir) if f.lower().endswith(('.jpg', '.jpeg'))]
     if not image_files:
         return
-    selected = random.sample(image_files, min(12, len(image_files)))
-    collage = create_collage(selected)
 
-    buffer = io.BytesIO()
-    collage.save(buffer, format="JPEG")
-    b64_img = base64.b64encode(buffer.getvalue()).decode()
+    images_html = "".join(
+        f"<div class='slide'><img src='data:image/jpeg;base64,{base64.b64encode(open(p, 'rb').read()).decode()}'></div>"
+        for p in image_files
+    )
 
-    st.markdown(f"""
+    html_code = f"""
     <style>
-    .stApp {{
-        background-image: url("data:image/jpeg;base64,{b64_img}");
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-    }}
-    .stApp::before {{
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
+    .carousel {{
+        display: flex;
+        overflow: hidden;
         width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.85);  /* Light overlay for readability */
-        z-index: -1;
+        max-width: 720px;
+        margin: 1rem auto 2rem;
+        border-radius: 12px;
+        box-shadow: 0 0 12px rgba(0,0,0,0.2);
+    }}
+    .slide {{
+        min-width: 100%;
+        transition: transform 1s ease;
+    }}
+    .slide img {{
+        width: 100%;
+        height: auto;
+        display: block;
     }}
     </style>
-    """, unsafe_allow_html=True)
+    <div class="carousel" id="carousel">
+        {images_html}
+    </div>
+    <script>
+    let index = 0;
+    const slides = document.querySelectorAll('.slide');
+    setInterval(() => {{
+        index = (index + 1) % slides.length;
+        document.getElementById('carousel').style.transform = 'translateX(' + (-index * 100) + '%)';
+    }}, 3000);
+    </script>
+    """
 
+    html(html_code, height=400)
+    
 # --- Load Secrets ---
 AWS_ACCESS_KEY = st.secrets["aws_access_key_id"]
 AWS_SECRET_KEY = st.secrets["aws_secret_access_key"]
@@ -102,7 +103,7 @@ def is_valid_email(email):
 
 # --- UI Screens ---
 def show_user_info_form():
-    set_background_from_collage()
+    show_image_carousel("sample_photos")
 
     # Inject container wrapper styling
     st.markdown("""
