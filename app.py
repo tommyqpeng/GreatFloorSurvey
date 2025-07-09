@@ -63,7 +63,7 @@ def set_background_from_collage():
         z-index: -1;
     }}
     </style>
-    """, unsafe_allow_html=True
+    """, unsafe_allow_html=True)
 
 # --- Load Secrets ---
 AWS_ACCESS_KEY = st.secrets["aws_access_key_id"]
