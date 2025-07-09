@@ -63,10 +63,7 @@ def set_background_from_collage():
         z-index: -1;
     }}
     </style>
-    """, unsafe_allow_html=True)
-
-# Set the background early
-set_background_from_collage()
+    """, unsafe_allow_html=True
 
 # --- Load Secrets ---
 AWS_ACCESS_KEY = st.secrets["aws_access_key_id"]
@@ -105,6 +102,7 @@ def is_valid_email(email):
 
 # --- UI Screens ---
 def show_user_info_form():
+    set_background_from_collage()
     st.title("The Great Floor Survey!")
     st.markdown("""
 Welcome to our research effort to **reduce falls** and **preserve active independence** in the elderly.
