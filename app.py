@@ -14,57 +14,6 @@ st.set_page_config(
     page_title="The Great Floor Survey",
     page_icon="senstride_icon.png"
 )
-
-def show_image_carousel(folder="sample_photos", max_images=10):
-    image_files = sorted([
-        os.path.join(folder, f)
-        for f in os.listdir(folder)
-        if f.lower().endswith((".jpg", ".jpeg"))
-    ])[:max_images]
-
-    if not image_files:
-        return
-
-    images_html = "".join(
-        f"<div class='slide'><img src='data:image/jpeg;base64,{base64.b64encode(open(p, 'rb').read()).decode()}'></div>"
-        for p in image_files
-    )
-
-    html_code = f"""
-    <style>
-    .carousel {{
-        display: flex;
-        overflow: hidden;
-        width: 100%;
-        max-width: 720px;
-        margin: 1rem auto 2rem;
-        border-radius: 12px;
-        box-shadow: 0 0 12px rgba(0,0,0,0.2);
-    }}
-    .slide {{
-        min-width: 100%;
-        transition: transform 1s ease;
-    }}
-    .slide img {{
-        width: 100%;
-        height: auto;
-        display: block;
-    }}
-    </style>
-    <div class="carousel" id="carousel">
-        {images_html}
-    </div>
-    <script>
-    let index = 0;
-    const slides = document.querySelectorAll('.slide');
-    setInterval(() => {{
-        index = (index + 1) % slides.length;
-        document.getElementById('carousel').style.transform = 'translateX(' + (-index * 100) + '%)';
-    }}, 3000);
-    </script>
-    """
-
-    html(html_code, height=400)
     
 # --- Load Secrets ---
 AWS_ACCESS_KEY = st.secrets["aws_access_key_id"]
@@ -103,21 +52,7 @@ def is_valid_email(email):
 
 # --- UI Screens ---
 def show_user_info_form():
-    show_image_carousel("sample_photos")
-
-    # Inject container wrapper styling
-    st.markdown("""
-    <style>
-    .white-box {
-        background-color: white;
-        padding: 2rem 3rem;
-        border-radius: 12px;
-        max-width: 800px;
-        margin: 4rem auto;
-        box-shadow: 0 0 20px rgba(0,0,0,0.1);
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    st.image("collage.jpg", use_column_width=True, caption="Examples from contributors.")
 
     # Use columns to center the container
     left_col, center_col, right_col = st.columns([1, 5, 1])
