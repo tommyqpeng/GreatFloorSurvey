@@ -61,14 +61,12 @@ def is_valid_email(email):
 # --- UI Screens ---
 def show_user_info_form():
     st.image("collage.jpg", use_container_width=True)
-    
-    # Center the logo below the collage
-    st.image("senstride_icon.png", width=100)
-    
 
     # Use columns to center the container
     left_col, center_col, right_col = st.columns([1, 5, 1])
     with center_col:
+        st.image("senstride_icon.png", width=100)
+        
         st.markdown('<div class="white-box">', unsafe_allow_html=True)
 
         st.title("The Great Floor Survey!")
