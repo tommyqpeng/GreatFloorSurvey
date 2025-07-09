@@ -70,7 +70,7 @@ def show_user_info_form():
         
         st.markdown(f"""
         <div style='text-align: center; margin-top: 1rem; margin-bottom: 2rem;'>
-            <img src='data:image/png;base64,{img_data}' width='100'/>
+            <img src='data:image/png;base64,{img_data}' width='68'/>
         </div>
         """, unsafe_allow_html=True)
         
