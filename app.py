@@ -52,7 +52,7 @@ def is_valid_email(email):
 
 # --- UI Screens ---
 def show_user_info_form():
-    st.image("collage.jpg", use_column_width=True, caption="Examples from contributors.")
+    st.image("collage.jpg", use_container_width=True, caption="Examples from contributors.")
 
     # Use columns to center the container
     left_col, center_col, right_col = st.columns([1, 5, 1])
