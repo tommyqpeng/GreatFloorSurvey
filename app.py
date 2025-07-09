@@ -14,6 +14,14 @@ st.set_page_config(
     page_title="The Great Floor Survey",
     page_icon="senstride_icon.png"
 )
+
+st.markdown("""
+<style>
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+header { visibility: hidden; }
+</style>
+""", unsafe_allow_html=True)
     
 # --- Load Secrets ---
 AWS_ACCESS_KEY = st.secrets["aws_access_key_id"]
@@ -53,6 +61,8 @@ def is_valid_email(email):
 # --- UI Screens ---
 def show_user_info_form():
     st.image("collage.jpg", use_container_width=True)
+    
+    st.image('senstride_icon.png')
 
     # Use columns to center the container
     left_col, center_col, right_col = st.columns([1, 5, 1])
