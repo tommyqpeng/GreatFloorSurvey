@@ -103,8 +103,21 @@ def is_valid_email(email):
 # --- UI Screens ---
 def show_user_info_form():
     set_background_from_collage()
-    st.title("The Great Floor Survey!")
-    st.markdown("""
+
+    with st.container():
+        st.markdown("""
+        <div style='
+            background-color: white;
+            padding: 2rem 3rem;
+            border-radius: 12px;
+            max-width: 800px;
+            margin: 2rem auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        '>
+        """, unsafe_allow_html=True)
+
+        st.title("The Great Floor Survey!")
+        st.markdown("""
 Welcome to our research effort to **reduce falls** and **preserve active independence** in the elderly.
 
 We're asking for your help by taking top-down photos of **common floor surfaces** in aged care environments.
@@ -122,29 +135,32 @@ Thank you from the Senstride team!
 Before you begin, please enter your details:
 """)
 
-    name = st.text_input("Your Name", value="")
-    email = st.text_input("Your Email", value="")
-    organisation = st.text_input("Organisation Name", value="")
+        name = st.text_input("Your Name", value="")
+        email = st.text_input("Your Email", value="")
+        organisation = st.text_input("Organisation Name", value="")
 
-    name_clean = name.strip()
-    email_clean = email.strip()
-    org_clean = organisation.strip()
+        name_clean = name.strip()
+        email_clean = email.strip()
+        org_clean = organisation.strip()
 
-    if st.button("Continue"):
-        if not name_clean:
-            st.error("Please enter your name.")
-        elif not is_valid_email(email_clean):
-            st.error("Please enter a valid email address.")
-        elif not org_clean:
-            st.error("Please enter your organisation name.")
-        else:
-            st.session_state["user_info"] = {
-                "name": name_clean,
-                "email": email_clean,
-                "organisation": org_clean
-            }
-            st.session_state["user_info_provided"] = True
-            st.rerun()
+        if st.button("Continue"):
+            if not name_clean:
+                st.error("Please enter your name.")
+            elif not is_valid_email(email_clean):
+                st.error("Please enter a valid email address.")
+            elif not org_clean:
+                st.error("Please enter your organisation name.")
+            else:
+                st.session_state["user_info"] = {
+                    "name": name_clean,
+                    "email": email_clean,
+                    "organisation": org_clean
+                }
+                st.session_state["user_info_provided"] = True
+                st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
     st.stop()
 
 def show_thank_you_screen():
