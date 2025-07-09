@@ -7,7 +7,6 @@ import io
 import re
 import os
 import base64
-from streamlit.components.v1 import html
 
 # --- Page Config ---
 st.set_page_config(
@@ -65,7 +64,15 @@ def show_user_info_form():
     # Use columns to center the container
     left_col, center_col, right_col = st.columns([1, 5, 1])
     with center_col:
-        st.image("senstride_icon.png", width=100)
+        
+        with open("senstride_icon.png", "rb") as f:
+            img_data = base64.b64encode(f.read()).decode()
+        
+        st.markdown(f"""
+        <div style='text-align: center; margin-top: 1rem; margin-bottom: 2rem;'>
+            <img src='data:image/png;base64,{img_data}' width='100'/>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown('<div class="white-box">', unsafe_allow_html=True)
 
