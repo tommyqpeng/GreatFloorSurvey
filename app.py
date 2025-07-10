@@ -139,7 +139,7 @@ Upload photos now. They will be securely stored and used to help improve fall pr
 """)
 
     uploaded_files = st.file_uploader(
-        "Upload s many as you want - from 1 to 50 at a time",
+        "Upload as many as you want - from 1 to 50 at a time",
         type=["jpg", "jpeg"],
         accept_multiple_files=True
     )
