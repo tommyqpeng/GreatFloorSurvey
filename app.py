@@ -65,12 +65,12 @@ def show_user_info_form():
     left_col, center_col, right_col = st.columns([1, 5, 1])
     with center_col:
         
-        with open("senstride_icon.png", "rb") as f:
+        with open("senstride_logo.png", "rb") as f:
             img_data = base64.b64encode(f.read()).decode()
         
         st.markdown(f"""
         <div style='text-align: center; margin-top: 1rem; margin-bottom: 2rem;'>
-            <img src='data:image/png;base64,{img_data}' width='68'/>
+            <img src='data:image/png;base64,{img_data}' width='180'/>
         </div>
         """, unsafe_allow_html=True)
         
@@ -139,7 +139,7 @@ Upload photos now. They will be securely stored and used to help improve fall pr
 """)
 
     uploaded_files = st.file_uploader(
-        "Upload up to 50 photos (JPG only)",
+        "Upload s many as you want - from 1 to 50 at a time",
         type=["jpg", "jpeg"],
         accept_multiple_files=True
     )
