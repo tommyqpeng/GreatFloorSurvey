@@ -15,11 +15,11 @@ st.set_page_config(
 )
 
 st.markdown("""
-<style>
-#MainMenu { visibility: hidden; }
-footer { visibility: hidden; }
-header { visibility: hidden; }
-</style>
+    <style>
+        header {visibility: hidden;}
+        .stActionButton {display: none;}
+        div[data-testid="stToolbar"] {visibility: hidden;}
+    </style>
 """, unsafe_allow_html=True)
     
 # --- Load Secrets ---
